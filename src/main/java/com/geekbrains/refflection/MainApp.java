@@ -4,18 +4,84 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.util.*;
 
 public class MainApp {
-    public static void main(String[] args) throws Exception{
+
+    public static void main(String[] args) throws Exception {
+        Class ju = MyTest.class;
+        start(ju);
+
+        System.out.println("--------------Пример реализации своего мини JUnit попроще(по одной аннотации Anno):---------------");
         //пример реализации своего мини JUnit :
         Class mt = MyTest.class; //складываем в объект наш помеченный аннотациями класс
         Method[] methods = mt.getDeclaredMethods();// получаем методы класса
         for (Method o : methods
-             ) {
-            if (o.isAnnotationPresent(Anno.class)){ //запускаем методы класса которые помеченны аннотацией
+        ) {
+            if (o.isAnnotationPresent(Anno.class)) { //запускаем методы класса которые помеченны аннотацией
                 System.out.println("Описание запускаемого метода: " + o.getAnnotation(Anno.class).description()); // достаем описание запускаемого метода
                 o.invoke(null);
             }
+        }
+    }
+
+    /**
+     Создать класс, который может выполнять «тесты». В качестве тестов выступают классы с наборами методов с аннотациями @Test.
+     Для этого у него должен быть статический метод start(), которому в качестве параметра передается или объект типа Class, или имя класса.
+     Из «класса-теста» вначале должен быть запущен метод с аннотацией @BeforeSuite, если такой имеется. Далее запущены методы с аннотациями @Test,
+     а по завершении всех тестов – метод с аннотацией @AfterSuite. К каждому тесту необходимо добавить приоритеты (int числа от 1 до 10),
+     в соответствии с которыми будет выбираться порядок их выполнения. Если приоритет одинаковый, то порядок не имеет значения.
+     Методы с аннотациями @BeforeSuite и @AfterSuite должны присутствовать в единственном экземпляре,
+     иначе необходимо бросить RuntimeException при запуске «тестирования».
+    **/
+
+    public static void start(Class ju) throws Exception {
+        Method[] jMethods = ju.getDeclaredMethods();// получаем методы класса
+        SortedSet<Integer> prioritySet = new TreeSet<Integer>();//Сет для формирования списка уникальных приоритетов методов помечнных аннотацией Test
+        List<Integer> mProirity = new ArrayList<Integer>();//Лист для хранения списка приоритетов методов помечнных аннотацией Test, потом уники Set сложим в лист
+        int b = 0;//счетчик для подсчета повторений аннотаций BeforeSuite в класе
+        int a = 0;//счетчик для подсчета повторений аннотаций AfterSuite в класе
+        for (Method o : jMethods) {
+            if (o.isAnnotationPresent(BeforeSuite.class)) {
+                b++;
+            } else if (o.isAnnotationPresent(AfterSuite.class)) {
+                a++;
+            } else if (o.isAnnotationPresent(Test.class)){
+                prioritySet.add((o.getAnnotation(Test.class)).priority());//добавляем в Set приоритеты аннотаций
+            }
+        }
+
+        Iterator iterator1 = prioritySet.iterator();//складываем уники из сета в лист
+        while(iterator1.hasNext()){
+            mProirity.add((Integer) iterator1.next());
+        }
+
+        if ((b > 1) | (a > 1)) {
+            throw new RuntimeException("Аннотации расставлены избыточно");
+        } else {
+            System.out.println("Аннотации указаны верно запускаем тест:");
+            Collections.sort(mProirity);
+            for (Method o : jMethods) { // сначала выводим метод с аннотацией BeforeSuite
+                if (o.isAnnotationPresent(BeforeSuite.class)) {
+                    o.invoke(null);
+                }
+            }
+            for (int i = 0; i < mProirity.size(); i++) { //теперь прогоняем все методы помеченные аннотацией Test
+                for (Method o : jMethods) {
+                    if (!((o.getAnnotation(Test.class)) == null)) {
+                        if (mProirity.get(i).equals((o.getAnnotation(Test.class)).priority())) {
+                            o.invoke(null);
+                        }
+                    }
+                }
+            }
+
+            for (Method o : jMethods) {
+                if (o.isAnnotationPresent(AfterSuite.class)) {
+                    o.invoke(null);
+                }
+            }
+
         }
     }
 
@@ -33,12 +99,12 @@ public class MainApp {
         cat.info();//проверяем удалось ли
 
         Method[] methods = c1.getMethods(); // при получении списка методов класса таким образом получаем только список открытых public методов
-        for (Method o: methods) {
+        for (Method o : methods) {
             System.out.println(o);
         }
 
         Method[] methodsAll = c1.getDeclaredMethods(); // получаем список всех методов даже закрытх модификаторами доступа
-        for (Method o: methodsAll) {
+        for (Method o : methodsAll) {
             System.out.println(o);
         }
 
