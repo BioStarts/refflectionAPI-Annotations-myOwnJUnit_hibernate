@@ -1,4 +1,4 @@
-package com.geekbrains.refflection;
+package com.geekbrains.refflection.trash;
 
 public class Cat  {// создаем простой класс с набором полей и методов с разными модификаторами доступа
     // и поиграем с ними с помощью refflectionAPI

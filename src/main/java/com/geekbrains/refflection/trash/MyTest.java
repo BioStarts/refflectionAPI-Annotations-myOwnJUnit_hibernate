@@ -1,4 +1,4 @@
-package com.geekbrains.refflection;
+package com.geekbrains.refflection.trash;
 
 public class MyTest {
 
