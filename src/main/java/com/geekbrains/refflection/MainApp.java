@@ -9,10 +9,7 @@ CREATE TABLE students (
 */
 
 import java.lang.reflect.Field;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -24,7 +21,9 @@ public class MainApp {
     public static void main(String[] args) {
         try {
             connect();
-            generateTable(Teachers.class);
+            //generateTable(Teachers.class);
+            addEntry(new Teachers(1,"Bob", "phD"));
+            addEntry(new Student(1,"Jhon",4));
         } catch (SQLException e) {
             e.printStackTrace();
         } finally {
@@ -53,7 +52,7 @@ public class MainApp {
 
 
 
-    public static void generateTable(Class c){
+    public static void generateTable(Class c){ //метод создающий таблицу из аннотрированного класса
         if (!c.isAnnotationPresent(Table.class)){
             throw new RuntimeException("Невозможно сгенерировать таблицу для класса без аннотации @Table");
         }
@@ -78,6 +77,50 @@ public class MainApp {
         } catch (SQLException e) {
             e.printStackTrace();
         }
+    }
+
+    public static void addEntry (Object obj){
+        Class c = obj.getClass();
+        if (!c.isAnnotationPresent(Table.class)){
+            throw new RuntimeException("Класс без аннотации @Table");
+        }
+
+        StringBuilder sb = new StringBuilder("INSERT INTO ");
+        sb.append(((Table)c.getAnnotation(Table.class)).title());//выцепили и добавили название таблицы из класса
+        sb.append(" (");
+        Field[] fields = c.getDeclaredFields();
+        for (Field o:fields) {
+            if (o.isAnnotationPresent(Column.class)){
+                sb.append(o.getName()).append(", ");// собираем строку из типов полей, которые присутсвуют в классе из которого лепим запрос на создание элемента
+            }
+        }
+        sb.setLength(sb.length() - 2);//отрезаем лишнюю запятую и пробел
+        sb.append(") VALUES (");
+
+        for (Field o:fields) {
+            if (o.isAnnotationPresent(Column.class)){
+                sb.append("?, ");// собираем строку для последующего prepareStatement
+            }
+        }
+        sb.setLength(sb.length() - 2);//отрезаем лишнюю запятую и пробел
+        sb.append(");");
+
+
+        String query = sb.toString();
+        try {
+            PreparedStatement psInsert = connection.prepareStatement(query);
+            int counter = 1;
+            for (Field o:fields) {
+                if (o.isAnnotationPresent(Column.class)){
+                    psInsert.setObject(counter, o.get(obj));
+                    counter++;
+                }
+            }
+            psInsert.executeUpdate();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
     }
 
 
